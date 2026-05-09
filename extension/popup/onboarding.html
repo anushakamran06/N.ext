@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>N.ext — Setup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --nus-blue: #003D7C;
+      --nus-blue-light: #0057B0;
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #262626;
+      --text: #f0f0f0;
+      --text-muted: #888;
+      --radius: 10px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .container { max-width: 520px; width: 100%; }
+    .logo { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    .logo span { color: var(--nus-blue-light); }
+    .subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
+    h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+    .template-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; }
+    .template-card {
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .template-card:hover, .template-card.selected { border-color: var(--nus-blue-light); }
+    .template-card.selected { background: rgba(0,87,176,0.08); }
+    .template-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .template-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .sources-section { margin-bottom: 28px; }
+    .source-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .source-row:last-child { border-bottom: none; }
+    .source-label { font-size: 13px; }
+    .source-desc { font-size: 11px; color: var(--text-muted); }
+    .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--border); border-radius: 20px; transition: 0.2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; height: 14px; width: 14px;
+      left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s;
+    }
+    input:checked + .toggle-slider { background: var(--nus-blue); }
+    input:checked + .toggle-slider::before { transform: translateX(16px); }
+    .save-btn {
+      width: 100%; padding: 14px; background: var(--nus-blue); color: #fff;
+      border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700;
+      cursor: pointer; letter-spacing: -0.2px;
+    }
+    .save-btn:hover { background: var(--nus-blue-light); }
+    .success { display: none; text-align: center; padding: 32px; }
+    .success h2 { margin-bottom: 8px; }
+    .success p { color: var(--text-muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">N<span>.</span>ext</div>
+  <p class="subtitle">You won't miss another opportunity at NUS.</p>
+
+  <h2>Choose your preset</h2>
+  <div class="template-grid" id="templateGrid">
+    <div class="template-card" data-template="freshman">
+      <h3>🎓 Freshman</h3>
+      <p>Canvas deadlines, NUS announcements, CCA and hall openings.</p>
+    </div>
+    <div class="template-card selected" data-template="internship">
+      <h3>💼 Internship Hunter</h3>
+      <p>TalentConnect listings, Reddit internship posts, hackathons on Devpost.</p>
+    </div>
+    <div class="template-card" data-template="scholarship">
+      <h3>🏆 Scholarship Focused</h3>
+      <p>NUS scholarship page, Reddit scholarship posts, bursary announcements.</p>
+    </div>
+  </div>
+
+  <div class="sources-section">
+    <h2>Toggle sources</h2>
+    <div id="sourcesList"></div>
+  </div>
+
+  <button class="save-btn" id="saveBtn">Save & Start Tracking</button>
+
+  <div class="success" id="successMsg">
+    <h2>You're all set! 🎉</h2>
+    <p>N.ext is now tracking opportunities for you.<br>You'll see notifications when new items arrive.</p>
+  </div>
+</div>
+
+<script>
+const TEMPLATES = {
+  freshman: { canvas: true, announcements: true, cca: true, talentconnect: false, reddit_internship: false, hackathons: false, scholarships: false, reddit_scholarship: false, bursary: false },
+  internship: { canvas: false, announcements: false, cca: false, talentconnect: true, reddit_internship: true, hackathons: true, scholarships: false, reddit_scholarship: false, bursary: false },
+  scholarship: { canvas: false, announcements: false, cca: false, talentconnect: false, reddit_internship: false, hackathons: false, scholarships: true, reddit_scholarship: true, bursary: true },
+};
+
+const SOURCE_LABELS = {
+  canvas: { label: 'Canvas', desc: 'Deadlines, announcements, unread notifications' },
+  announcements: { label: 'NUS Announcements', desc: 'Official NUS news page' },
+  cca: { label: 'CCA / Hall Openings', desc: 'Co-curricular activity openings' },
+  talentconnect: { label: 'TalentConnect', desc: 'Internship listings from nus-csm.symplicity.com' },
+  reddit_internship: { label: 'Reddit r/NUS — Internships', desc: 'Posts mentioning internship, deadline, application' },
+  hackathons: { label: 'Hackathons (Devpost)', desc: 'Singapore-tagged hackathons' },
+  scholarships: { label: 'NUS Scholarships Page', desc: 'scholarships.nus.edu.sg listings' },
+  reddit_scholarship: { label: 'Reddit r/NUS — Scholarships', desc: 'Posts mentioning scholarship, bursary, SEP' },
+  bursary: { label: 'Bursary Announcements', desc: 'Financial aid announcements' },
+};
+
+let selected = 'internship';
+let sources = { ...TEMPLATES[selected] };
+
+function renderSources() {
+  const list = document.getElementById('sourcesList');
+  list.innerHTML = '';
+  Object.entries(SOURCE_LABELS).forEach(([key, info]) => {
+    const row = document.createElement('div');
+    row.className = 'source-row';
+    row.innerHTML = `
+      <div>
+        <div class="source-label">${info.label}</div>
+        <div class="source-desc">${info.desc}</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" data-source="${key}" ${sources[key] ? 'checked' : ''}>
+        <span class="toggle-slider"></span>
+      </label>`;
+    row.querySelector('input').addEventListener('change', e => {
+      sources[e.target.dataset.source] = e.target.checked;
+    });
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('templateGrid').addEventListener('click', e => {
+  const card = e.target.closest('.template-card');
+  if (!card) return;
+  document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selected = card.dataset.template;
+  sources = { ...TEMPLATES[selected] };
+  renderSources();
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  await chrome.storage.local.set({ next_prefs: { template: selected, sources } });
+  document.querySelector('.container > *:not(.success)').forEach?.(el => el.style.display = 'none');
+  // simpler approach: hide everything
+  document.querySelectorAll('.container > *').forEach(el => el.style.display = 'none');
+  document.getElementById('successMsg').style.display = 'block';
+  setTimeout(() => window.close(), 2000);
+});
+
+renderSources();
+</script>
+</body>
+</html>
